@@ -44,7 +44,7 @@ ompl_interface::PoseModelStateSpace::PoseModelStateSpace(const ModelBasedStateSp
 {
   jump_factor_ = 3; // \todo make this a param
   
-  if (spec.joint_model_group_->getGroupKinematics().first)
+  if (spec.joint_model_group_->getGroupKinematics().first) // first = KinematicsSolver
     poses_.push_back(PoseComponent(spec.joint_model_group_, spec.joint_model_group_->getGroupKinematics().first));
   else
     if (!spec.joint_model_group_->getGroupKinematics().second.empty())

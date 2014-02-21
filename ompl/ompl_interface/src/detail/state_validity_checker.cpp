@@ -39,6 +39,34 @@
 #include <moveit/profiler/profiler.h>
 #include <ros/ros.h>
 
+// TEMP HACK: testing method to check for robot balance - DTC
+bool stabilityCallback(const robot_state::RobotState &robot_state, bool verbose)
+{
+  //logInform("Checking feasibility of the state using planning scene");
+  
+  /*
+  // get the joint value for the right shoulder pan of the PR2 robot
+  std::vector<double> joint_state_values;
+  robot_state.copyJointGroupPositions("torso", joint_state_values);
+
+  // debug
+  std::copy(joint_state_values.begin(), joint_state_values.end(), std::ostream_iterator<double>(std::cout, "\n"));
+  */
+
+  // Limits: -0.0872665 to 1.0472 (full forward)
+  double value = robot_state.getVariablePosition("CHEST_JOINT1");
+  bool result = (value < 0.3);
+
+  if (result)
+    logInform("stabilityCallback result is %s from value %f ", (result?"true":"false"), value);
+  else
+    logError("stabilityCallback result is %s from value %f ", (result?"true":"false"), value);
+
+  return result;
+}
+// END
+
+
 ompl_interface::StateValidityChecker::StateValidityChecker(const ModelBasedPlanningContext *pc)
   : ompl::base::StateValidityChecker(pc->getOMPLSimpleSetup().getSpaceInformation())
   , planning_context_(pc)
@@ -113,7 +141,7 @@ bool ompl_interface::StateValidityChecker::isValidWithoutCache(const ompl::base:
   if (!si_->satisfiesBounds(state))
   {
     if (verbose)
-      logInform("State outside bounds");
+      logInform("State outside bounds 1");
     return false;
   }
 
@@ -125,7 +153,11 @@ bool ompl_interface::StateValidityChecker::isValidWithoutCache(const ompl::base:
   const kinematic_constraints::KinematicConstraintSetPtr &kset = planning_context_->getPathConstraints();
   if (kset && !kset->decide(*kstate, verbose).satisfied)
     return false;
-
+  
+  // TEMP HACK DTC - check feasibility 2
+  //if (!stabilityCallback(*kstate, verbose))
+  //  return false;
+  
   // check feasibility
   if (!planning_context_->getPlanningScene()->isStateFeasible(*kstate, verbose))
     return false;
@@ -138,13 +170,15 @@ bool ompl_interface::StateValidityChecker::isValidWithoutCache(const ompl::base:
 
 bool ompl_interface::StateValidityChecker::isValidWithoutCache(const ompl::base::State *state, double &dist, bool verbose) const
 {
+  // check bounds
   if (!si_->satisfiesBounds(state))
   {
     if (verbose)
-      logInform("State outside bounds");
+      logInform("State outside bounds 2");
     return false;
   }
 
+  // convert ompl state to moveit robot state
   robot_state::RobotState *kstate = tss_.getStateStorage();
   planning_context_->getOMPLStateSpace()->copyToRobotState(*kstate, state);
 
@@ -159,6 +193,10 @@ bool ompl_interface::StateValidityChecker::isValidWithoutCache(const ompl::base:
       return false;
     }
   }
+
+  // TEMP HACK DTC - check feasibility 2
+  //if (!stabilityCallback(*kstate, verbose))
+  //  return false;
 
   // check feasibility
   if (!planning_context_->getPlanningScene()->isStateFeasible(*kstate, verbose))
@@ -177,12 +215,15 @@ bool ompl_interface::StateValidityChecker::isValidWithoutCache(const ompl::base:
 bool ompl_interface::StateValidityChecker::isValidWithCache(const ompl::base::State *state, bool verbose) const
 {
   if (state->as<ModelBasedStateSpace::StateType>()->isValidityKnown())
+  {
+    logInform("used cache!");
     return state->as<ModelBasedStateSpace::StateType>()->isMarkedValid();
+  }
 
   if (!si_->satisfiesBounds(state))
   {
     if (verbose)
-      logInform("State outside bounds");
+      logInform("State outside bounds 3");
     const_cast<ob::State*>(state)->as<ModelBasedStateSpace::StateType>()->markInvalid();
     return false;
   }
@@ -197,6 +238,10 @@ bool ompl_interface::StateValidityChecker::isValidWithCache(const ompl::base::St
     const_cast<ob::State*>(state)->as<ModelBasedStateSpace::StateType>()->markInvalid();
     return false;
   }
+
+  // TEMP HACK DTC - check feasibility 2
+  //if (!stabilityCallback(*kstate, verbose))
+  //  return false;
 
   // check feasibility
   if (!planning_context_->getPlanningScene()->isStateFeasible(*kstate, verbose))
@@ -225,13 +270,14 @@ bool ompl_interface::StateValidityChecker::isValidWithCache(const ompl::base::St
   if (state->as<ModelBasedStateSpace::StateType>()->isValidityKnown() && state->as<ModelBasedStateSpace::StateType>()->isGoalDistanceKnown())
   {
     dist = state->as<ModelBasedStateSpace::StateType>()->distance;
+    logInform("used cache!");
     return state->as<ModelBasedStateSpace::StateType>()->isMarkedValid();
   }
 
   if (!si_->satisfiesBounds(state))
   {
     if (verbose)
-      logInform("State outside bounds");
+      logInform("State outside bounds 4");
     const_cast<ob::State*>(state)->as<ModelBasedStateSpace::StateType>()->markInvalid(0.0);
     return false;
   }
@@ -251,6 +297,10 @@ bool ompl_interface::StateValidityChecker::isValidWithCache(const ompl::base::St
       return false;
     }
   }
+
+  // TEMP HACK DTC - check feasibility 2
+  //if (!stabilityCallback(*kstate, verbose))
+  //  return false;
 
   // check feasibility
   if (!planning_context_->getPlanningScene()->isStateFeasible(*kstate, verbose))

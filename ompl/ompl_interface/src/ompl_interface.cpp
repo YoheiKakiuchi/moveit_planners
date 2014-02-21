@@ -50,6 +50,12 @@ ompl_interface::OMPLInterface::OMPLInterface(const robot_model::RobotModelConstP
   use_constraints_approximations_(true),
   simplify_solutions_(true)
 {
+  if (!kmodel_)
+  {
+    ROS_ERROR_STREAM_NAMED("temp","No robot model has been loaded");
+    //return;
+  }
+
   ROS_INFO("Initializing OMPL interface using ROS parameters");
   loadPlannerConfigurations();
   loadConstraintApproximations();
@@ -308,13 +314,16 @@ void ompl_interface::OMPLInterface::loadPlannerConfigurations()
     }
   }
 
-  for(planning_interface::PlannerConfigurationMap::iterator it = pconfig.begin();
-      it != pconfig.end(); ++it)
+  if (false) //zebraparameters
   {
-    ROS_DEBUG_STREAM("Parameters for configuration '"<< it->first << "'");
-    for (std::map<std::string, std::string>::const_iterator config_it = it->second.config.begin() ;
-         config_it != it->second.config.end() ; ++config_it)
-      ROS_DEBUG_STREAM(" - " << config_it->first << " = " << config_it->second);
+    for(planning_interface::PlannerConfigurationMap::iterator it = pconfig.begin();
+        it != pconfig.end(); ++it)
+    {
+      ROS_DEBUG_STREAM("Parameters for configuration '"<< it->first << "'");
+      for (std::map<std::string, std::string>::const_iterator config_it = it->second.config.begin() ;
+           config_it != it->second.config.end() ; ++config_it)
+        ROS_DEBUG_STREAM(" - " << config_it->first << " = " << config_it->second);
+    }
   }
   setPlannerConfigurations(pconfig);
 }

@@ -302,7 +302,7 @@ const ompl_interface::ModelBasedStateSpaceFactoryPtr& ompl_interface::PlanningCo
   }
   else
   {
-    logDebug("Using '%s' parameterization for solving problem", best->first.c_str());
+    logWarn("Using '%s' parameterization for solving problem", best->first.c_str());
     return best->second;
   }
 }
@@ -353,6 +353,10 @@ ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextMana
 
     robot_state::RobotStatePtr start_state = planning_scene->getCurrentStateUpdated(req.start_state);
 
+    // TEMP HACK: testing method to check for robot balance - DTC
+    //planning_scene->setStateFeasibilityPredicate(userCallback);
+    // END
+
     // Setup the context
     context->setPlanningScene(planning_scene);
     context->setMotionPlanRequest(req);
@@ -365,7 +369,7 @@ ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextMana
     if (!context->setGoalConstraints(req.goal_constraints, req.path_constraints, &error_code))
       return ModelBasedPlanningContextPtr();
 
-    try
+   try
     {
       context->configure();
       logDebug("%s: New planning context is set.", context->getName().c_str());
