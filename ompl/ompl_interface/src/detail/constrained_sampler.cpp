@@ -60,6 +60,7 @@ double ompl_interface::ConstrainedSampler::getConstrainedSamplingRate() const
 
 bool ompl_interface::ConstrainedSampler::sampleC(ob::State *state)
 {
+  logInform("sampleC");
   //  moveit::Profiler::ScopedBlock sblock("sampleWithConstraints");
 
   if (constraint_sampler_->sample(work_state_, planning_context_->getCompleteInitialRobotState(), planning_context_->getMaximumStateSamplingAttempts()))
@@ -77,12 +78,14 @@ bool ompl_interface::ConstrainedSampler::sampleC(ob::State *state)
 
 void ompl_interface::ConstrainedSampler::sampleUniform(ob::State *state)
 {
+  logInform("sampleUniform");
   if (!sampleC(state) && !sampleC(state) && !sampleC(state))
     default_->sampleUniform(state);
 }
 
 void ompl_interface::ConstrainedSampler::sampleUniformNear(ob::State *state, const ob::State *near, const double distance)
 {
+  logInform("sampleUniformNear");
   if (sampleC(state) || sampleC(state) || sampleC(state))
   {
     double total_d = space_->distance(state, near);
@@ -98,6 +101,7 @@ void ompl_interface::ConstrainedSampler::sampleUniformNear(ob::State *state, con
 
 void ompl_interface::ConstrainedSampler::sampleGaussian(ob::State *state, const ob::State *mean, const double stdDev)
 {
+  logInform("sampleGaussian");
   if (sampleC(state) || sampleC(state) || sampleC(state))
   {
     double total_d = space_->distance(state, mean);

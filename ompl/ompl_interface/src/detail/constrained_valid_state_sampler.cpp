@@ -50,11 +50,12 @@ ompl_interface::ValidConstrainedSampler::ValidConstrainedSampler(const ModelBase
   if (!constraint_sampler_)
     default_sampler_ = si_->allocStateSampler();
   inv_dim_ = si_->getStateSpace()->getDimension() > 0 ? 1.0 / (double)si_->getStateSpace()->getDimension() : 1.0;
-  logDebug("Constructed a ValidConstrainedSampler instance at address %p", this);
+  logWarn("Constructed a ValidConstrainedSampler instance at address %p", this);
 }
 
 bool ompl_interface::ValidConstrainedSampler::project(ompl::base::State *state)
 {
+  logInform("constrained_valid_state_sampler PROJECT");
   if (constraint_sampler_)
   {
     planning_context_->getOMPLStateSpace()->copyToRobotState(work_state_, state);
@@ -72,6 +73,7 @@ bool ompl_interface::ValidConstrainedSampler::project(ompl::base::State *state)
 
 bool ompl_interface::ValidConstrainedSampler::sample(ob::State *state)
 {
+  logInform("constrained_valid_state_sampler SAMPLE");
   //  moveit::Profiler::ScopedBlock pblock("ValidConstrainedSampler::sample");
   if (constraint_sampler_)
   {
@@ -97,6 +99,7 @@ bool ompl_interface::ValidConstrainedSampler::sample(ob::State *state)
 
 bool ompl_interface::ValidConstrainedSampler::sampleNear(ompl::base::State *state, const ompl::base::State *near, const double distance)
 {
+  logInform("constrained_valid_state_sampler SAMPLE NEAR");
   if (!sample(state))
     return false;
   double total_d = si_->distance(state, near);
