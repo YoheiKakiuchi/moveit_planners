@@ -261,6 +261,9 @@ protected:
   double tag_snap_to_segment_;
   double tag_snap_to_segment_complement_;
 
+  // For use with interpolation of feet position with respect to the ground
+  robot_state::RobotStatePtr temp_state_;
+  Eigen::Translation3d default_foot_translation_;
 };
 
 typedef boost::shared_ptr<ModelBasedStateSpace> ModelBasedStateSpacePtr;

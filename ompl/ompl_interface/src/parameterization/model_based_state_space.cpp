@@ -74,6 +74,26 @@ ompl_interface::ModelBasedStateSpace::ModelBasedStateSpace(const ModelBasedState
   params_.declareParam<double>("tag_snap_to_segment",
                                boost::bind(&ModelBasedStateSpace::setTagSnapToSegment, this, _1),
                                boost::bind(&ModelBasedStateSpace::getTagSnapToSegment, this));
+
+  // HRP2JSKNT Hack / Test Code ------------------------------------------------------------------------------------
+
+  // create a robot state for use with interpolation
+  temp_state_.reset(new robot_state::RobotState(spec_.robot_model_));
+  // set the robot state to its default position so that we can record the default z translation of the feet
+  temp_state_->setToDefaultValues();
+
+  // get default offset of foot to world coordinate
+  Eigen::Affine3d left_foot_transform_;
+  Eigen::Affine3d right_foot_transform_;
+  left_foot_transform_  = temp_state_->getGlobalLinkTransform("LLEG_LINK5");
+  right_foot_transform_ = temp_state_->getGlobalLinkTransform("RLEG_LINK5");
+
+  // Get a target foot position as the average of the two feet's location
+  default_foot_translation_ = Eigen::Translation3d(
+    (left_foot_transform_.translation().x() + right_foot_transform_.translation().x()) / 2,
+    (left_foot_transform_.translation().y() + right_foot_transform_.translation().y()) / 2,
+    std::min(left_foot_transform_.translation().z(), right_foot_transform_.translation().z()));
+  // --------------------------------------------------------------------------------------------------------------
 }
 
 ompl_interface::ModelBasedStateSpace::~ModelBasedStateSpace()
@@ -175,6 +195,8 @@ bool ompl_interface::ModelBasedStateSpace::satisfiesBounds(const ompl::base::Sta
 
 void ompl_interface::ModelBasedStateSpace::interpolate(const ompl::base::State *from, const ompl::base::State *to, const double t, ompl::base::State *state) const
 {
+  logInform("model_based_state_space: interpolate begin");
+
   // clear any cached info (such as validity known or not)
   state->as<StateType>()->clearKnownInformation();
 
@@ -182,7 +204,43 @@ void ompl_interface::ModelBasedStateSpace::interpolate(const ompl::base::State *
   {
     // perform the actual interpolation
     spec_.joint_model_group_->interpolate(from->as<StateType>()->values, to->as<StateType>()->values, t, state->as<StateType>()->values);
-    
+
+    // HRP2JSKNT Hack / Test Code ------------------------------------------------------------------------------------
+
+    // Convert to a robot state temporarily
+    copyToRobotState(*temp_state_, state);
+
+    // Move the virtual joint such that the lowest foot touches the ground
+    Eigen::Affine3d virtual_joint_transform  = temp_state_->getJointTransform("virtual_joint");
+
+    double x_average = (
+      temp_state_->getGlobalLinkTransform("LLEG_LINK5").translation().x() +
+      temp_state_->getGlobalLinkTransform("RLEG_LINK5").translation().x()) / 2;
+
+    double y_average = (
+      temp_state_->getGlobalLinkTransform("LLEG_LINK5").translation().y() +
+      temp_state_->getGlobalLinkTransform("RLEG_LINK5").translation().y()) / 2;
+
+    double z_lowest_foot = std::min(
+      temp_state_->getGlobalLinkTransform("LLEG_LINK5").translation().z(),
+      temp_state_->getGlobalLinkTransform("RLEG_LINK5").translation().z());
+
+    // Create the transform for moving the virtual joint
+    const Eigen::Affine3d down_transform(Eigen::Translation3d(
+        -x_average+default_foot_translation_.x(),
+        -y_average+default_foot_translation_.y(),
+        -z_lowest_foot+default_foot_translation_.z()
+      ));
+
+    // Perform the transform and apply back to robot state
+    virtual_joint_transform = down_transform * virtual_joint_transform;
+    temp_state_->setJointPositions("virtual_joint", virtual_joint_transform);
+
+    // Now convert the robot_state back into OMPL state. it should now have feet touching the ground
+    copyToOMPLState(state, *temp_state_);
+
+    // --------------------------------------------------------------------------------------------------------------
+
     // compute tag
     if (from->as<StateType>()->tag >= 0 && t < 1.0 - tag_snap_to_segment_)
       state->as<StateType>()->tag = from->as<StateType>()->tag;
