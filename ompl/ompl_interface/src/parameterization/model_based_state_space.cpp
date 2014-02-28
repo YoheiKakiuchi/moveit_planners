@@ -94,6 +94,8 @@ ompl_interface::ModelBasedStateSpace::ModelBasedStateSpace(const ModelBasedState
     (left_foot_transform_.translation().y() + right_foot_transform_.translation().y()) / 2,
     std::min(left_foot_transform_.translation().z(), right_foot_transform_.translation().z()));
   // --------------------------------------------------------------------------------------------------------------
+
+  printSettings(std::cout);
 }
 
 ompl_interface::ModelBasedStateSpace::~ModelBasedStateSpace()
@@ -195,17 +197,27 @@ bool ompl_interface::ModelBasedStateSpace::satisfiesBounds(const ompl::base::Sta
 
 void ompl_interface::ModelBasedStateSpace::interpolate(const ompl::base::State *from, const ompl::base::State *to, const double t, ompl::base::State *state) const
 {
-  logInform("model_based_state_space: interpolate begin");
+  logInform(" model_based_state_space: interpolate at time %f", t);
 
   // clear any cached info (such as validity known or not)
   state->as<StateType>()->clearKnownInformation();
 
   if (!interpolation_function_ || !interpolation_function_(from, to, t, state))
   {
+    /*
+    logWarn("from state:");
+    printState(from, std::cout);
+    logWarn("to state:");
+    printState(to, std::cout);
+    */
+
     // perform the actual interpolation
     spec_.joint_model_group_->interpolate(from->as<StateType>()->values, to->as<StateType>()->values, t, state->as<StateType>()->values);
 
     // HRP2JSKNT Hack / Test Code ------------------------------------------------------------------------------------
+
+    //logWarn("state state:");
+    //printState(state, std::cout);
 
     // Convert to a robot state temporarily
     copyToRobotState(*temp_state_, state);
@@ -213,6 +225,7 @@ void ompl_interface::ModelBasedStateSpace::interpolate(const ompl::base::State *
     // Move the virtual joint such that the lowest foot touches the ground
     Eigen::Affine3d virtual_joint_transform  = temp_state_->getJointTransform("virtual_joint");
 
+    /*
     double x_average = (
       temp_state_->getGlobalLinkTransform("LLEG_LINK5").translation().x() +
       temp_state_->getGlobalLinkTransform("RLEG_LINK5").translation().x()) / 2;
@@ -220,15 +233,22 @@ void ompl_interface::ModelBasedStateSpace::interpolate(const ompl::base::State *
     double y_average = (
       temp_state_->getGlobalLinkTransform("LLEG_LINK5").translation().y() +
       temp_state_->getGlobalLinkTransform("RLEG_LINK5").translation().y()) / 2;
-
+    */
     double z_lowest_foot = std::min(
       temp_state_->getGlobalLinkTransform("LLEG_LINK5").translation().z(),
       temp_state_->getGlobalLinkTransform("RLEG_LINK5").translation().z());
 
-    // Create the transform for moving the virtual joint
-    const Eigen::Affine3d down_transform(Eigen::Translation3d(
+    // This version works for planning with robot in place, but it over-constrains the x and y when planning with walking
+    /*const Eigen::Affine3d down_transform(Eigen::Translation3d(
         -x_average+default_foot_translation_.x(),
         -y_average+default_foot_translation_.y(),
+        -z_lowest_foot+default_foot_translation_.z()
+        ));*/
+
+    // Create the transform for moving the virtual joint
+    const Eigen::Affine3d down_transform(Eigen::Translation3d(
+        0,
+        0,
         -z_lowest_foot+default_foot_translation_.z()
       ));
 
@@ -238,7 +258,8 @@ void ompl_interface::ModelBasedStateSpace::interpolate(const ompl::base::State *
 
     // Now convert the robot_state back into OMPL state. it should now have feet touching the ground
     copyToOMPLState(state, *temp_state_);
-
+    //logWarn("modified state state:");
+    //printState(state, std::cout);
     // --------------------------------------------------------------------------------------------------------------
 
     // compute tag
