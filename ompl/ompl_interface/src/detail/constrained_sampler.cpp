@@ -79,8 +79,12 @@ bool ompl_interface::ConstrainedSampler::sampleC(ob::State *state)
 void ompl_interface::ConstrainedSampler::sampleUniform(ob::State *state)
 {
   logInform("sampleUniform");
+  // Attempt to sample the constraint 3 times
   if (!sampleC(state) && !sampleC(state) && !sampleC(state))
+  {
+    logError("Unable to sample constraint (3 attempts), falling back to sampleUniform default");
     default_->sampleUniform(state);
+  }
 }
 
 void ompl_interface::ConstrainedSampler::sampleUniformNear(ob::State *state, const ob::State *near, const double distance)

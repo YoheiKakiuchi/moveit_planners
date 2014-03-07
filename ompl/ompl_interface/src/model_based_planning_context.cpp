@@ -263,9 +263,16 @@ void ompl_interface::ModelBasedPlanningContext::simplifySolution(double timeout)
 
 void ompl_interface::ModelBasedPlanningContext::interpolateSolution()
 {
+  logInform(" model_based_planning_context: interpolateSolution");
   if (ompl_simple_setup_.haveSolutionPath())
   {
     og::PathGeometric &pg = ompl_simple_setup_.getSolutionPath();
+
+    logInform(" model_based_planning_context: has solution path. max solution seg length: %d. Interpolate so that there are %d states. Min waypoint count: %d", 
+      max_solution_segment_length_, 
+      std::max((unsigned int)floor(0.5 + pg.length() / max_solution_segment_length_), minimum_waypoint_count_),
+      minimum_waypoint_count_);
+
     pg.interpolate(std::max((unsigned int)floor(0.5 + pg.length() / max_solution_segment_length_), minimum_waypoint_count_));
   }
 }
@@ -490,6 +497,8 @@ bool ompl_interface::ModelBasedPlanningContext::solve(planning_interface::Motion
       res.trajectory_.back().reset(new robot_trajectory::RobotTrajectory(getRobotModel(), getGroupName()));
       getSolutionPath(*res.trajectory_.back());
     }
+
+    logInform(" model_based_planning_context: solve - start interpolate");
 
     ompl::time::point start_interpolate = ompl::time::now();
     interpolateSolution();

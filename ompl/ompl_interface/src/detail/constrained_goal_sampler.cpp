@@ -60,6 +60,7 @@ ompl_interface::ConstrainedGoalSampler::ConstrainedGoalSampler(const ModelBasedP
 
 bool ompl_interface::ConstrainedGoalSampler::sampleUsingConstraintSampler(const ob::GoalLazySamples *gls, ob::State *newGoal)
 {
+  //logInform("constrained_goal_sampler.sampleUsingConstraintSampler: start");
   //  moveit::Profiler::ScopedBlock sblock("ConstrainedGoalSampler::sampleUsingConstraintSampler");
   
   unsigned int max_attempts = planning_context_->getMaximumGoalSamplingAttempts();
@@ -67,16 +68,25 @@ bool ompl_interface::ConstrainedGoalSampler::sampleUsingConstraintSampler(const 
   
   // terminate after too many attempts
   if (attempts_so_far >= max_attempts)
+  {
+    logInform("constrained_goal_sampler.sampleUsingConstraintSampler: terminate after too many attempts");
     return false;
-  
+  }
+
   // terminate after a maximum number of samples
   if (gls->getStateCount() >= planning_context_->getMaximumGoalSamples())
+  {
+    logInform("constrained_goal_sampler.sampleUsingConstraintSampler: terminate after a maximum number of samples");
     return false;
+  }
   
   // terminate the sampling thread when a solution has been found
   if (planning_context_->getOMPLSimpleSetup().getProblemDefinition()->hasSolution())
+  {
+    logInform("constrained_goal_sampler.sampleUsingConstraintSampler: terminate the sampling thread when a solution has been found");
     return false;
-  
+  }
+
   unsigned int max_attempts_div2 = max_attempts/2;
   for (unsigned int a = gls->samplingAttemptsCount() ; a < max_attempts && gls->isSampling() ; ++a)
   {
@@ -90,6 +100,7 @@ bool ompl_interface::ConstrainedGoalSampler::sampleUsingConstraintSampler(const 
     
     if (constraint_sampler_)
     {
+      //logInform("constrained_goal_sampler.sampleUsingConstraintSampler: project");
       if (constraint_sampler_->project(work_state_, planning_context_->getMaximumStateSamplingAttempts()))
       {
         work_state_.update();
@@ -112,6 +123,7 @@ bool ompl_interface::ConstrainedGoalSampler::sampleUsingConstraintSampler(const 
     }
     else
     {
+      logError("fallback to default sampleUniform");
       default_sampler_->sampleUniform(newGoal);
       if (static_cast<const StateValidityChecker*>(si_->getStateValidityChecker().get())->isValid(newGoal, verbose))
       {

@@ -122,6 +122,8 @@ void ompl_interface::PoseModelStateSpace::interpolate(const ompl::base::State *f
   // we want to interpolate in Cartesian space; we do not have a guarantee that from and to
   // have their poses computed, but this is very unlikely to happen (depends how the planner gets its input states)
 
+  logInform(" pose_model_state_space: interpolate begin");
+
   // interpolate in joint space
   ModelBasedStateSpace::interpolate(from, to, t, state);
 
@@ -132,13 +134,11 @@ void ompl_interface::PoseModelStateSpace::interpolate(const ompl::base::State *f
   // the call above may reset all flags for state; but we know the pose we want flag should be set
   state->as<StateType>()->setPoseComputed(true);
 
-  /*
   std::cout << "*********** interpolate\n";
   printState(from, std::cout);
   printState(to, std::cout);
   printState(state, std::cout);
   std::cout << "\n\n";
-  */
   
   // after interpolation we cannot be sure about the joint values (we use them as seed only)
   // so we recompute IK if needed
